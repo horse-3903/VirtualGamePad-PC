@@ -83,6 +83,8 @@ class Server : public QWidget
 		float lx = 0, ly = 0, rx = 0, ry = 0, lt = 0, rt = 0;
 		// Waiting for the person at the PC to approve this device
 		bool pending = false;
+		// When anything last arrived from this device, so one that goes silent can be dropped
+		qint64 lastHeardNs = 0;
 		// Round-trip time: the server pings, the device answers with the same number
 		bool pingSupported = false;
 		quint32 pingId = 0;

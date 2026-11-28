@@ -92,7 +92,7 @@
         <item>
          <widget class="QLabel" name="hintLabel">
           <property name="text">
-           <string>Join the same Wi-Fi network as this PC, then scan the QR code or enter the address in the app.</string>
+           <string>Pick the address that matches how your phone connects (same network, USB tethering or hotspot), then scan the QR code or enter it in the app.</string>
           </property>
           <property name="wordWrap">
            <bool>true</bool>

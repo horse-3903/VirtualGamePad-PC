@@ -17,7 +17,7 @@ Planned work for AirDeck-PC, roughly in the order it will be built. Nothing here
 ## Next
 
 - **Short pairing code** - a code shown on the PC and typed on the phone, for a stronger check than a remembered address.
-- **Latency history** - a graph of round trip time over a session, and published measurements for latency and jitter.
+- **Latency history** - a graph of round trip time over a session, and published measurements for latency and jitter. A test script already exists in the AirDeck repo under `tools/latency_test.py`.
 
 ## Later
 

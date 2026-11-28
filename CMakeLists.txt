@@ -111,6 +111,8 @@ set(PROJECT_SOURCES
     src/platform/toast.hpp
     src/platform/padcleanup.cpp
     src/platform/padcleanup.hpp
+    src/platform/adapterinfo.cpp
+    src/platform/adapterinfo.hpp
     src/debuglog.cpp
     src/debuglog.hpp
     src/ui/toastpopup.hpp
@@ -171,6 +173,9 @@ if(WIN32)
         cfgmgr32
         psapi
         shell32
+        iphlpapi
+        advapi32
+        ws2_32
     )
 elseif(LINUX)
     target_link_libraries(AirDeck PRIVATE

@@ -86,3 +86,7 @@ CMakeLists.txt.user*
 # CMake cache files
 # -------------------
 cmake_cache*.cmake
+
+# Runtime logs written when the app is run from a source folder
+airdeck.*.log
+airdeck.*.log.lock

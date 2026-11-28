@@ -2,6 +2,7 @@
 #include "../debuglog.hpp"
 
 #include "../../third-party-libs/QR-Code-generator/cpp/qrcodegen.hpp"
+#include "../platform/adapterinfo.hpp"
 #include "../platform/elevation.hpp"
 #include "../ui/glyphs.hpp"
 #include "../ui/slotcolors.hpp"
@@ -576,7 +577,7 @@ void Server::initServer()
 
 		auto *pings = new QTimer(this);
 		connect(pings, &QTimer::timeout, this, &Server::sendPings);
-		pings->start(2000);
+		pings->start(500);
 
 		auto *status = new QTimer(this);
 		connect(status, &QTimer::timeout, this, [this]() {
@@ -625,34 +626,71 @@ void Server::initServer()
 	ui->portLabel->setText(tr("Port: **%1**").arg(tcpServer->serverPort()));
 	ui->portLabel->setTextFormat(Qt::MarkdownText);
 
-	// Most phones join the same Wi-Fi as this PC, which is almost always a private range.
-	// Show those first and mark the most likely one so virtual adapters are not mistaken for it.
-	auto rank = [](const QHostAddress &address) {
-		const QString text = address.toString();
-		if (text.startsWith("192.168."))
-			return 0;
-		if (text.startsWith("10."))
-			return 1;
-		if (text.startsWith("172."))
-			return 2;
-		return 3;
+	// Say which way of connecting each address is for, from what Windows reports about the adapter: its type, whether
+	// it is a physical card, and the bus the device sits on. Names are only shown, never matched.
+	struct AddressKind
+	{
+		QString label;
+		QString tip;
+		int rank; // lower is shown first and the first is recommended
 	};
-	QList<QHostAddress> candidates;
+	const QHash<QString, AdapterInfo> infos = adapterInfoByAddress();
+	QHash<QString, QNetworkInterface> owners;
+	for (const QNetworkInterface &iface : QNetworkInterface::allInterfaces())
+	{
+		for (const QNetworkAddressEntry &addressEntry : iface.addressEntries())
+			owners.insert(addressEntry.ip().toString(), iface);
+	}
+	const auto classify = [&owners, &infos, this](const QHostAddress &address) {
+		const QString text = address.toString();
+		const QNetworkInterface iface = owners.value(text);
+		const AdapterInfo info = infos.value(text);
+		const QString name = info.known && !info.name.isEmpty() ? info.name : iface.humanReadableName();
+		const bool wifi = info.known ? info.ifType == 71 : iface.type() == QNetworkInterface::Wifi;
+		if (info.known)
+		{
+			if (info.bus == QLatin1String("BTH"))
+				return AddressKind{tr("%1 (Bluetooth network)").arg(name), tr("Only for a phone paired over Bluetooth tethering. Slower than Wi-Fi."), 25};
+			if (info.bus == QLatin1String("USB"))
+				return AddressKind{wifi ? tr("%1 (USB Wi-Fi adapter)").arg(name) : tr("%1 (USB network, such as phone tethering)").arg(name),
+								   wifi ? tr("The phone needs to be on the same Wi-Fi network.") : tr("A device connected by USB cable. For a phone with tethering on, this has the lowest delay."),
+								   wifi ? 1 : 2};
+			if (!info.hardware)
+			{
+				if (wifi)
+					return AddressKind{tr("%1 (Wi-Fi hotspot from this PC)").arg(name), tr("Use this when the phone joins the Wi-Fi hotspot made by this PC."), 3};
+				if (info.ifType == 53 || info.ifType == 131 || info.bus == QLatin1String("SWD") || info.bus == QLatin1String("ROOT"))
+					return AddressKind{tr("%1 (VPN or tunnel)").arg(name), tr("Works from anywhere if the phone has the same VPN app. Traffic over a VPN such as Tailscale is encrypted."), 20};
+				return AddressKind{tr("%1 (virtual network, not for phones)").arg(name), tr("A virtual switch for virtual machines on this PC. A phone cannot reach it."), 30};
+			}
+			return AddressKind{wifi ? tr("%1 (Wi-Fi)").arg(name) : tr("%1 (wired network)").arg(name),
+							   wifi ? tr("The phone needs to be on the same Wi-Fi network.") : tr("The phone needs to be on the same network, usually the same router."),
+							   wifi ? 1 : 0};
+		}
+		if (wifi)
+			return AddressKind{tr("%1 (Wi-Fi)").arg(name), tr("The phone needs to be on the same Wi-Fi network."), 1};
+		if (iface.type() == QNetworkInterface::Ethernet)
+			return AddressKind{tr("%1 (wired network)").arg(name), tr("The phone needs to be on the same network, usually the same router."), 0};
+		return AddressKind{name.isEmpty() ? tr("other adapter") : name, tr("Use it if the phone can reach this adapter's network."), 10};
+	};
+	struct Candidate
+	{
+		QHostAddress address;
+		AddressKind kind;
+	};
+	QList<Candidate> candidates;
 	for (const QHostAddress &entry : QNetworkInterface::allAddresses())
 	{
 		if (entry.isGlobal() && entry.protocol() == QAbstractSocket::IPv4Protocol)
-			candidates.append(entry);
+			candidates.append(Candidate{entry, classify(entry)});
 	}
-	std::stable_sort(candidates.begin(), candidates.end(),
-					 [&rank](const QHostAddress &a, const QHostAddress &b) {
-						 return rank(a) < rank(b);
-					 });
+	std::stable_sort(candidates.begin(), candidates.end(), [](const Candidate &a, const Candidate &b) { return a.kind.rank < b.kind.rank; });
 	for (int i = 0; i < candidates.size(); ++i)
 	{
-		const QHostAddress &entry = candidates.at(i);
-		const QString address = entry.toString();
-		auto *item = new QListWidgetItem(i == 0 ? tr("%1   (recommended)").arg(address)
-												: tr("%1   (other adapter)").arg(address));
+		const QString address = candidates.at(i).address.toString();
+		auto *item = new QListWidgetItem(QStringLiteral("%1   %2%3")
+											 .arg(address, candidates.at(i).kind.label, i == 0 ? tr("  (recommended)") : QString()));
+		item->setToolTip(candidates.at(i).kind.tip);
 		item->setData(Qt::UserRole, address);
 		ui->IPList->addItem(item);
 		QLabel *QRWidget = new QLabel();
@@ -660,6 +698,12 @@ void Server::initServer()
 		ui->QRViewer->addWidget(QRWidget);
 		qrLabels.push_back(QRWidget);
 		qrAddresses << address;
+	}
+	// Show every address without scrolling, up to six
+	if (ui->IPList->count() > 0)
+	{
+		const int rowHeight = std::max(ui->IPList->sizeHintForRow(0), 36);
+		ui->IPList->setFixedHeight(std::min(static_cast<int>(ui->IPList->count()), 6) * rowHeight + 2 * ui->IPList->frameWidth() + 6);
 	}
 	if (ui->IPList->count() > 0)
 	{
@@ -1502,8 +1546,42 @@ static qint64 nowNs()
 	return clock.nsecsElapsed();
 }
 
+// A phone that loses its connection without saying goodbye (a network change, flight mode, a dead battery) leaves the
+// PC with a connection that looks open. TCP keepalive finds those within about 10 seconds even for devices that do
+// not answer pings, where the system default would take two hours.
+static void enableKeepAlive(QTcpSocket *socket)
+{
+	socket->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
+#ifdef _WIN32
+	// The names are not in the headers this file already includes, so the Windows values are written out
+	const SOCKET handle = static_cast<SOCKET>(socket->socketDescriptor());
+	const int idleSeconds = 5, intervalSeconds = 1, probes = 3;
+	setsockopt(handle, IPPROTO_TCP, 3 /* TCP_KEEPIDLE */, reinterpret_cast<const char *>(&idleSeconds), sizeof(idleSeconds));
+	setsockopt(handle, IPPROTO_TCP, 17 /* TCP_KEEPINTVL */, reinterpret_cast<const char *>(&intervalSeconds), sizeof(intervalSeconds));
+	setsockopt(handle, IPPROTO_TCP, 16 /* TCP_KEEPCNT */, reinterpret_cast<const char *>(&probes), sizeof(probes));
+#endif
+}
+
 void Server::sendPings()
 {
+	// Devices that answer pings must keep talking. One that goes quiet is dropped, which frees its controller slot.
+	std::vector<QTcpSocket *> silent;
+	const qint64 now = nowNs();
+	for (auto &c : clients)
+	{
+		if (!c->active || c->pending || c->lastHeardNs == 0)
+			continue;
+		const bool answers = (c->protocol == Client::Protocol::Native && c->pingSupported) || c->protocol == Client::Protocol::WebSocket;
+		const int overrideSeconds = SettingsSingleton::instance().qsettings()->value("server/idle_timeout_s", 0).toInt();
+		const qint64 limitNs = (overrideSeconds > 0 ? overrideSeconds : (c->protocol == Client::Protocol::WebSocket ? 12 : 8)) * 1000000000LL;
+		if (answers && now - c->lastHeardNs > limitNs)
+			silent.push_back(c->socket);
+	}
+	for (QTcpSocket *socket : silent)
+	{
+		debugLog(QStringLiteral("No word from %1 for several seconds, dropping it").arg(socket->peerAddress().toString()));
+		socket->abort();
+	}
 	for (auto &c : clients)
 	{
 		if (!c->active || c->pending)
@@ -1529,19 +1607,21 @@ void Server::notePong(Client &client, quint32 id)
 	client.pingSentNs = 0;
 	client.lastRttMs = ms;
 	client.rtts.push_back(ms);
-	if (client.rtts.size() > 30)
+	if (client.rtts.size() > 120)
 		client.rtts.erase(client.rtts.begin());
-	if (++client.rttSinceLog >= 15)
+	if (++client.rttSinceLog >= 20)
 	{
 		client.rttSinceLog = 0;
-		double sum = 0, worst = 0;
-		for (double v : client.rtts)
-		{
+		std::vector<double> sorted = client.rtts;
+		std::sort(sorted.begin(), sorted.end());
+		double sum = 0;
+		for (double v : sorted)
 			sum += v;
-			worst = std::max(worst, v);
-		}
-		debugLog(QStringLiteral("Latency slot %1 \"%2\": %3 ms average, %4 ms worst over %5 pings").arg(client.slot).arg(client.name)
-					 .arg(sum / static_cast<double>(client.rtts.size()), 0, 'f', 1).arg(worst, 0, 'f', 1).arg(client.rtts.size()));
+		const auto pick = [&sorted](double p) { return sorted[std::min(sorted.size() - 1, static_cast<size_t>(static_cast<double>(sorted.size()) * p))]; };
+		debugLog(QStringLiteral("Latency slot %1 \"%2\" over %3 pings: min %4, median %5, mean %6, p95 %7, max %8 ms")
+					 .arg(client.slot).arg(client.name).arg(sorted.size())
+					 .arg(sorted.front(), 0, 'f', 1).arg(pick(0.5), 0, 'f', 1).arg(sum / static_cast<double>(sorted.size()), 0, 'f', 1)
+					 .arg(pick(0.95), 0, 'f', 1).arg(sorted.back(), 0, 'f', 1));
 	}
 	for (SlotCard &card : slotCards)
 	{
@@ -1671,9 +1751,11 @@ void Server::handleConnection()
 		return;
 	// disable Nagle's algorithm to avoid delay and bunching of small packages
 	socket->setSocketOption(QAbstractSocket::LowDelayOption, 1);
+	enableKeepAlive(socket);
 
 	auto client = std::make_unique<Client>();
 	client->socket = socket;
+	client->lastHeardNs = nowNs();
 	client->connectedAtMs = QDateTime::currentMSecsSinceEpoch();
 	clients.push_back(std::move(client));
 	debugLog(QStringLiteral("Connection from %1:%2 accepted, %3 open").arg(socket->peerAddress().toString()).arg(socket->peerPort()).arg(clients.size()));
@@ -1734,6 +1816,7 @@ void Server::serveClient()
 	Client &client = **clientIt;
 	const QByteArray incoming = socket->readAll();
 	client.bytesIn += static_cast<quint64>(incoming.size());
+	client.lastHeardNs = nowNs();
 	client.buffer.append(incoming);
 	// Nothing legitimate is this large, so a client that sends it is cut off instead of filling memory
 	if (client.buffer.size() > (1 << 20))
