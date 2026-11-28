@@ -22,7 +22,13 @@ Planned work for AirDeck-PC, roughly in the order it will be built. Nothing here
 - **Automatic game profiles** - read Steam's `RunningAppID` registry value and load the layout saved for that game, with the foreground process name as a fallback for non-Steam games.
 - **Split controller** - two phones feeding one virtual controller, for co-op on a single player's pad or steering and pedals on separate devices.
 - **Haptic pattern editor** - custom vibration patterns that can be shared.
+- **Game telemetry for adaptive layouts** - read game state so the phone can switch layout by context, such as on foot or driving.
+- **Event stream for the haptic engine** - send telemetry and rumble events to the phone so it can mix them with its own cues.
+- **Device fusion** - let several devices form one logical controller, an extension of the split controller.
+- **Evaluation harness** - repeatable tests for missed presses, tracking error and latency, to compare layouts and input methods.
 - **Layout sharing** - a place to publish and download layouts.
+
+The wider plan is in the [AirDeck roadmap](https://github.com/horse-3903/AirDeck/blob/main/ROADMAP.md).
 
 ## Known limits
 
