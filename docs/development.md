@@ -35,7 +35,7 @@ The server is Qt 6 and C++20, built with CMake and Ninja on MSVC 2022. Virtual p
 - Visual Studio 2022 with the C++ workload
 - Qt 6.8.3 for MSVC 2022 64-bit
 - CMake, Ninja and Git
-- The [ViGEmBus](https://github.com/nefarius/ViGEmBus/releases) driver, for the virtual Xbox 360 mode
+- The [ViGEmBus](https://github.com/nefarius/ViGEmBus/releases) driver, for the virtual controller mode
 
 ### Installation
 
@@ -63,7 +63,7 @@ dist/bin/AirDeck.exe
 
 | Mode | Needs | Controllers | Notes |
 |---|---|---|---|
-| Virtual Xbox 360 (ViGEm) | ViGEmBus driver | Up to 8 | Default. Slots 5 to 8 are DualShock 4 style. |
+| Virtual controller (ViGEm) | ViGEmBus driver | Up to 8 | Default. Xbox 360 or PlayStation (DualShock 4), set by Controller type. |
 | InputInjector | Windows 10+, Administrator, Developer Mode | Up to 8 | Experimental. Crashes on some systems, but the server survives. |
 | Keyboard and mouse | Nothing | 1 | Uses the active keymap profile. |
 
@@ -121,5 +121,8 @@ Stored in `AirDeck.ini` next to the executable. Most are in Preferences.
 | `server/executor_type` | ViGEm | Input mode: ViGEm, InputInjector or keyboard and mouse. |
 | `server/debug` | `false` | Writes `debug.log` under `%APPDATA%\horse-3903\AirDeck`, capped at 8 MiB. |
 | `server/multi_controller` | `false` | Lets one device hold several controllers. |
+| `server/pad_style` | `xbox` | Virtual controller type in ViGEm mode: `xbox` or `playstation`. |
+| `server/require_approval` | `false` | Asks on the PC before a new device connects. |
+| `server/trusted_devices` | empty | Addresses approved with Always allow. |
 | `app/run_as_admin` | `false` | Starts elevated, so pad cleanup never prompts. |
 | `mouse_setting/mouse_sensitivity` | `100` | Pointer speed in keyboard and mouse mode. |

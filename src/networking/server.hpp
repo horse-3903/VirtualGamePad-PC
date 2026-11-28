@@ -81,6 +81,15 @@ class Server : public QWidget
 		quint64 bytesIn = 0;
 		qint64 connectedAtMs = 0;
 		float lx = 0, ly = 0, rx = 0, ry = 0, lt = 0, rt = 0;
+		// Waiting for the person at the PC to approve this device
+		bool pending = false;
+		// Round-trip time: the server pings, the device answers with the same number
+		bool pingSupported = false;
+		quint32 pingId = 0;
+		qint64 pingSentNs = 0;
+		double lastRttMs = -1;
+		std::vector<double> rtts;
+		int rttSinceLog = 0;
 	};
 	struct SlotCard
 	{
@@ -144,6 +153,14 @@ class Server : public QWidget
 	void releaseAllPads(std::function<void()> done);
 	// Game rumble for a controller slot, passed on to the phone or browser that plays it
 	void pushRumble(int slot, unsigned char large, unsigned char weak);
+	// Measures the round trip to every connected device every couple of seconds
+	void sendPings();
+	void notePong(Client &client, quint32 id);
+	QString latencyText(const Client &client) const;
+	// Asks the person at the PC before a device that has not been approved before can connect
+	bool needsApproval(const Client &client) const;
+	void askApproval(Client &client);
+	void finishApproval(QTcpSocket *socket, int choice);
 	QLabel *tabIcon[2] = {nullptr, nullptr};
 	QLabel *tabText[2] = {nullptr, nullptr};
 	QLabel *tabCount = nullptr;
@@ -163,6 +180,8 @@ class Server : public QWidget
 	void styleTabs();
 	bool debugEnabled() const;
 	bool multiControllerEnabled() const;
+	// True when the virtual controllers should appear to games as DualShock 4 pads instead of Xbox 360 pads
+	bool padStyleIsPlayStation() const;
 	QString debugLogPath() const;
 	static QString webPageVersion();
 	void debugLog(const QString &line, bool force = false);

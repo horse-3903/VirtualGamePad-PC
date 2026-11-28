@@ -37,7 +37,7 @@
 
   <!-- Hierarchy: tagline + single subtle capability line -->
   <text x="64" y="232" fill="#B7BBC4" font-family="'Space Grotesk','Inter','Segoe UI',system-ui,sans-serif" font-size="22" font-weight="500" letter-spacing="-0.2">Wireless control, your way.</text>
-  <text x="64" y="264" fill="#B7BBC4" fill-opacity="0.62" font-family="'Space Grotesk','Inter','Segoe UI',system-ui,sans-serif" font-size="13.5" font-weight="500">Virtual Xbox 360 pad over Wi-Fi  ·  Browser or app  ·  Editable layouts</text>
+  <text x="64" y="264" fill="#B7BBC4" fill-opacity="0.62" font-family="'Space Grotesk','Inter','Segoe UI',system-ui,sans-serif" font-size="13.5" font-weight="500">Xbox or PlayStation pad over Wi-Fi  ·  Browser or app  ·  Editable layouts</text>
 
   <!-- Right side: layout-editor composition (64px top, bottom, and right margins) -->
   <g transform="translate(616, 64)">

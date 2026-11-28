@@ -1,10 +1,10 @@
 <div align="center">
 
-![AirDeck banner: wireless control, your way. Use your phone as a PC game controller with a virtual Xbox 360 gamepad over Wi-Fi.](assets/banner.svg)
+![AirDeck banner: wireless control, your way. Use your phone as a PC game controller with a virtual Xbox 360 or PlayStation DualShock 4 gamepad over Wi-Fi.](assets/banner.svg)
 
 # AirDeck-PC
 
-The Windows server for AirDeck. Use your phone as a PC game controller: it creates a virtual Xbox 360 gamepad from an Android phone or iPhone over Wi-Fi, and hosts a browser controller that needs no app.
+The Windows server for AirDeck. Use your phone as a PC game controller: it creates a virtual Xbox 360 or PlayStation gamepad from an Android phone or iPhone over Wi-Fi, and hosts a browser controller that needs no app.
 
 ![C++](https://img.shields.io/badge/C%2B%2B-20-00599C?style=flat-square&logo=cplusplus&logoColor=white)
 ![Qt](https://img.shields.io/badge/Qt-6.8-41CD52?style=flat-square&logo=qt&logoColor=white)
@@ -22,7 +22,7 @@ The Windows server for AirDeck. Use your phone as a PC game controller: it creat
 
 Run this server on your Windows PC, connect a phone, and your games see a normal Xbox controller. Up to eight phones can join at once.
 
-- **A real Xbox 360 controller** - through the ViGEm driver, or Windows InputInjector, or keyboard and mouse with keymap profiles.
+- **Xbox or PlayStation, your pick** - games detect each phone as an Xbox 360 controller or a DualShock 4, through the ViGEm driver. Or use Windows InputInjector, or keyboard and mouse with keymap profiles.
 - **App or browser** - the Android app, or any phone browser with the same layout editor and settings.
 - **Game rumble, tilt steering, response curves** - tuned per layout.
 - **Easy to join** - QR codes for the app and the browser, a ranked adapter list, and a live input test.

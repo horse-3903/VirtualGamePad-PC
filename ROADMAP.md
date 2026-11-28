@@ -10,12 +10,14 @@ Planned work for AirDeck-PC, roughly in the order it will be built. Nothing here
 - Bounded debug log
 - Joy-Con button style in the browser controller
 - Browser layout editor with the app's model: anchors, groups, snapping, undo, shared layout format
+- Choose Xbox 360 or PlayStation (DualShock 4) as the virtual controller type
+- Round-trip latency readout on each controller card, with a summary in the debug log
+- Optional approve prompt before a new device can connect, with remembered devices
 
 ## Next
 
-- **Round-trip latency readout** - a ping in the input tester and the debug log, then published measurements for input latency and jitter.
-- **Secure pairing** - a PC-side approve prompt or a short code, so only devices you accept can connect.
-- **Trigger detents** - haptic ticks at set trigger thresholds on the phone.
+- **Short pairing code** - a code shown on the PC and typed on the phone, for a stronger check than a remembered address.
+- **Latency history** - a graph of round trip time over a session, and published measurements for latency and jitter.
 
 ## Later
 

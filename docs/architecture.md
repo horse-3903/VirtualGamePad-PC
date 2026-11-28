@@ -7,7 +7,7 @@ AirDeck-PC is a Qt 6 and C++20 desktop app. It accepts phone connections, decode
 | Part | Where | Job |
 |---|---|---|
 | Server | `src/networking/server.*` | TCP listener and server page. Sniffs each connection, keeps a `Client` per phone (protocol, slot, name, model, executor), hosts the browser page and a hand-written WebSocket. |
-| Executors | `src/networking/executor.*` | Turn controller state into input. `ViGEmExecutor` is a virtual Xbox 360 pad, `GamepadExecutor` uses Windows InputInjector, `KeyboardMouseExecutor` presses keys. |
+| Executors | `src/networking/executor.*` | Turn controller state into input. `ViGEmExecutor` is a virtual Xbox 360 or DualShock 4 pad, `GamepadExecutor` uses Windows InputInjector, `KeyboardMouseExecutor` presses keys. |
 | UI | `src/ui/` | Main window, home, server page, preferences, input tester, and the tray icon. |
 | Settings | `src/settings/` | `AirDeck.ini` and `profiles/` next to the exe. Input type, keymap profiles. |
 | Platform | `src/platform/` | Elevation check, virtual pad cleanup, native toasts. |
@@ -26,7 +26,7 @@ One controller per device address is enforced unless Allow several controllers p
 
 ## Input modes
 
-- **ViGEm** needs the ViGEmBus driver. Slots 1 to 4 are Xbox 360 (XInput), 5 to 8 are DualShock 4 style.
+- **ViGEm** needs the ViGEmBus driver. `server/pad_style` picks the pad type: `xbox` (the default) gives slots 1 to 4 Xbox 360 (XInput) and 5 to 8 DualShock 4 style, and `playstation` makes all eight DualShock 4. The style is read when a device connects.
 - **InputInjector** is experimental. Creation is wrapped in SEH, so a crash in `xboxgipsynthetic.dll` does not take the server down.
 - **Keyboard and mouse** tracks held keys per source and only presses or releases on transitions, so a key mapped from several controls is reference counted.
 

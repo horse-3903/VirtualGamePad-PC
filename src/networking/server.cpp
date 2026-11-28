@@ -574,6 +574,10 @@ void Server::initServer()
 		});
 		traffic->start(5000);
 
+		auto *pings = new QTimer(this);
+		connect(pings, &QTimer::timeout, this, &Server::sendPings);
+		pings->start(2000);
+
 		auto *status = new QTimer(this);
 		connect(status, &QTimer::timeout, this, [this]() {
 			if (!DebugLog::enabled())
@@ -788,7 +792,7 @@ void Server::updateStatus()
 	const int port = tcpServer != nullptr ? tcpServer->serverPort() : 0;
 	if (countPill != nullptr)
 	{
-		const QString modeName = serverMode == ExecutorType::VigemExecutor ? tr("Xbox 360 (ViGEm)")
+		const QString modeName = serverMode == ExecutorType::VigemExecutor ? (padStyleIsPlayStation() ? tr("DualShock 4 (ViGEm)") : tr("Xbox 360 (ViGEm)"))
 								 : serverMode == ExecutorType::GamepadExecutor ? tr("Windows virtual gamepad")
 																			   : tr("Keyboard and mouse");
 		countPill->setText(tr("%1  \u00B7  Port %2").arg(modeName).arg(port));
@@ -821,6 +825,12 @@ void Server::showTab(int index)
 bool Server::debugEnabled() const
 {
 	return DebugLog::enabled();
+}
+
+bool Server::padStyleIsPlayStation() const
+{
+	return serverMode == ExecutorType::VigemExecutor &&
+		   SettingsSingleton::instance().qsettings()->value("server/pad_style", "xbox").toString() == QLatin1String("playstation");
 }
 
 bool Server::multiControllerEnabled() const
@@ -1208,8 +1218,9 @@ void Server::updateSlots()
 		card.occupied = active;
 		if (!active && usable)
 			freeSlots.push_back(i + 1);
-		// Controllers 5 to 8 are always the PlayStation style ones
-		const bool ps4 = i >= 4;
+		// Controllers 5 to 8 are always the PlayStation style ones, and so is every slot when PlayStation is chosen
+		const bool psStyle = padStyleIsPlayStation();
+		const bool ps4 = i >= 4 || psStyle;
 		const QColor slot = slotColor(i + 1);
 		const QColor art = active ? slot : QColor("#4A4A52");
 		const QString slotRgb = QString("%1,%2,%3").arg(slot.red()).arg(slot.green()).arg(slot.blue());
@@ -1222,7 +1233,8 @@ void Server::updateSlots()
 		QString tip = active ? QString() : (usable ? tr("Available. Click to connect a device.") : tr("Not available in this mode"));
 		if (ps4)
 		{
-			const QString note = tr("Appears as a PlayStation controller. Games that only read XInput will not see it.");
+			const QString note = psStyle ? tr("Appears as a PlayStation controller. Games with PlayStation support show PlayStation buttons.")
+										 : tr("Appears as a PlayStation controller. Games that only read XInput will not see it.");
 			tip = tip.isEmpty() ? note : tip + QStringLiteral("\n") + note;
 		}
 		card.frame->setToolTip(tip);
@@ -1360,10 +1372,12 @@ bool Server::activate(Client &client, QString *failure)
 		const int xboxInUse = static_cast<int>(std::count_if(
 			clients.begin(), clients.end(),
 			[](const std::unique_ptr<Client> &c) { return c->active && !c->ds4; }));
-		const bool useDs4 = xboxInUse >= 4;
+		const bool psStyle = padStyleIsPlayStation();
+		const bool useDs4 = psStyle || xboxInUse >= 4;
 		if (useDs4)
 		{
-			for (int candidate : {5, 6, 7, 8})
+			const std::vector<int> candidates = psStyle ? std::vector<int>{1, 2, 3, 4, 5, 6, 7, 8} : std::vector<int>{5, 6, 7, 8};
+			for (int candidate : candidates)
 			{
 				if (!slotUsed(candidate))
 				{
@@ -1480,6 +1494,162 @@ bool Server::activate(Client &client, QString *failure)
 	return true;
 }
 
+static qint64 nowNs()
+{
+	static QElapsedTimer clock;
+	if (!clock.isValid())
+		clock.start();
+	return clock.nsecsElapsed();
+}
+
+void Server::sendPings()
+{
+	for (auto &c : clients)
+	{
+		if (!c->active || c->pending)
+			continue;
+		const bool native = c->protocol == Client::Protocol::Native && c->pingSupported;
+		const bool web = c->protocol == Client::Protocol::WebSocket;
+		if (!native && !web)
+			continue;
+		c->pingId++;
+		c->pingSentNs = nowNs();
+		if (native)
+			c->socket->write("VGPPING:" + QByteArray::number(c->pingId) + "\n");
+		else
+			sendWebJson(*c, QJsonObject{{"t", "ping"}, {"id", static_cast<qint64>(c->pingId)}});
+	}
+}
+
+void Server::notePong(Client &client, quint32 id)
+{
+	if (id != client.pingId || client.pingSentNs == 0)
+		return;
+	const double ms = static_cast<double>(nowNs() - client.pingSentNs) / 1.0e6;
+	client.pingSentNs = 0;
+	client.lastRttMs = ms;
+	client.rtts.push_back(ms);
+	if (client.rtts.size() > 30)
+		client.rtts.erase(client.rtts.begin());
+	if (++client.rttSinceLog >= 15)
+	{
+		client.rttSinceLog = 0;
+		double sum = 0, worst = 0;
+		for (double v : client.rtts)
+		{
+			sum += v;
+			worst = std::max(worst, v);
+		}
+		debugLog(QStringLiteral("Latency slot %1 \"%2\": %3 ms average, %4 ms worst over %5 pings").arg(client.slot).arg(client.name)
+					 .arg(sum / static_cast<double>(client.rtts.size()), 0, 'f', 1).arg(worst, 0, 'f', 1).arg(client.rtts.size()));
+	}
+	for (SlotCard &card : slotCards)
+	{
+		if (card.occupied && card.ip != nullptr && client.slot > 0 && &card == &slotCards[client.slot - 1])
+		{
+			card.ip->setText(client.socket->peerAddress().toString() + QStringLiteral("  \u00B7  ") + latencyText(client));
+			QString tip;
+			double sum = 0, lo = 1e9, hi = 0;
+			for (double v : client.rtts)
+			{
+				sum += v;
+				lo = std::min(lo, v);
+				hi = std::max(hi, v);
+			}
+			card.ip->parentWidget()->setToolTip(tr("Round trip over the last %1 pings: %2 ms best, %3 ms average, %4 ms worst")
+													.arg(client.rtts.size()).arg(lo, 0, 'f', 1).arg(sum / static_cast<double>(client.rtts.size()), 0, 'f', 1).arg(hi, 0, 'f', 1));
+		}
+	}
+}
+
+QString Server::latencyText(const Client &client) const
+{
+	if (client.lastRttMs < 0)
+		return QString();
+	return tr("%1 ms").arg(client.lastRttMs, 0, 'f', client.lastRttMs < 10 ? 1 : 0);
+}
+
+bool Server::needsApproval(const Client &client) const
+{
+	auto *settings = SettingsSingleton::instance().qsettings();
+	if (!settings->value("server/require_approval", false).toBool())
+		return false;
+	return !settings->value("server/trusted_devices").toStringList().contains(deviceKey(client));
+}
+
+void Server::askApproval(Client &client)
+{
+	client.pending = true;
+	QPointer<QTcpSocket> socket = client.socket;
+	const QString address = deviceKey(client);
+	const QString kind = client.protocol == Client::Protocol::WebSocket ? tr("a web browser") : tr("the AirDeck app");
+	debugLog(QStringLiteral("Waiting for approval of %1 (%2)").arg(address, kind));
+	auto *box = new QMessageBox(QMessageBox::Question, tr("Allow this device?"),
+								tr("A device at %1, using %2, wants to connect and control this PC.").arg(address, kind), QMessageBox::NoButton, nullptr);
+	box->setAttribute(Qt::WA_DeleteOnClose);
+	box->setWindowFlag(Qt::WindowStaysOnTopHint, true);
+	box->setInformativeText(tr("Only allow devices you recognise. Always allow remembers this address."));
+	box->addButton(tr("Allow"), QMessageBox::AcceptRole);
+	box->addButton(tr("Always allow"), QMessageBox::YesRole);
+	QPushButton *deny = box->addButton(tr("Deny"), QMessageBox::RejectRole);
+	box->setDefaultButton(deny);
+	box->setEscapeButton(deny);
+	connect(box, &QDialog::finished, this, [this, socket, box](int) {
+		if (socket == nullptr)
+			return;
+		const QAbstractButton *clicked = box->clickedButton();
+		const int role = clicked != nullptr ? static_cast<int>(box->buttonRole(const_cast<QAbstractButton *>(clicked))) : static_cast<int>(QMessageBox::RejectRole);
+		finishApproval(socket, role == QMessageBox::YesRole ? 2 : role == QMessageBox::AcceptRole ? 1 : 0);
+	});
+	if (socket != nullptr)
+		connect(socket, &QAbstractSocket::disconnected, box, [box]() { box->close(); });
+	box->open();
+	box->raise();
+	box->activateWindow();
+}
+
+void Server::finishApproval(QTcpSocket *socket, int choice)
+{
+	const auto it = std::find_if(clients.begin(), clients.end(), [socket](const std::unique_ptr<Client> &c) { return c->socket == socket; });
+	if (it == clients.end())
+		return;
+	Client &client = **it;
+	if (!client.pending)
+		return;
+	client.pending = false;
+	if (choice == 0)
+	{
+		debugLog(QStringLiteral("Denied %1").arg(deviceKey(client)));
+		refuse(client, tr("This device was not approved on the PC."));
+		return;
+	}
+	if (choice == 2)
+	{
+		auto *settings = SettingsSingleton::instance().qsettings();
+		QStringList trusted = settings->value("server/trusted_devices").toStringList();
+		if (!trusted.contains(deviceKey(client)))
+			trusted.append(deviceKey(client));
+		settings->setValue("server/trusted_devices", trusted);
+	}
+	debugLog(QStringLiteral("Approved %1%2").arg(deviceKey(client), choice == 2 ? QStringLiteral(", remembered") : QString()));
+	QString failure;
+	if (!activate(client, &failure))
+	{
+		refuse(client, failure);
+		return;
+	}
+	if (client.protocol == Client::Protocol::WebSocket)
+	{
+		sendWebJson(client, QJsonObject{{"t", "slot"}, {"n", client.slot}, {"v", webPageVersion()}});
+		serveWebSocket(client);
+	}
+	else
+	{
+		client.socket->write("VGPSLOT:" + QByteArray::number(client.slot) + "\n");
+		serveNative(client);
+	}
+}
+
 void Server::refuse(Client &client, const QString &why)
 {
 	qWarning() << "Refusing a device:" << why;
@@ -1587,6 +1757,11 @@ void Server::serveClient()
 		else
 		{
 			client.protocol = Client::Protocol::Native;
+			if (needsApproval(client))
+			{
+				askApproval(client);
+				return;
+			}
 			QString failure;
 			if (!activate(client, &failure))
 			{
@@ -1597,6 +1772,8 @@ void Server::serveClient()
 		}
 	}
 
+	if (client.pending)
+		return;
 	switch (client.protocol)
 	{
 	case Client::Protocol::Native:
@@ -1634,9 +1811,19 @@ void Server::serveNative(Client &client)
 				QString::fromUtf8(client.buffer.mid(9, end - 9)).split('|');
 			client.name = parts.value(0).trimmed();
 			client.model = parts.value(1).trimmed();
+			client.pingSupported = parts.value(2).trimmed() == QLatin1String("ping");
 			client.buffer.remove(0, end + 1);
 			qInfo() << "Device introduced itself:" << client.name << client.model;
 			updateSlots();
+			continue;
+		}
+		if (client.buffer.startsWith("VGPPONG:"))
+		{
+			const int end = client.buffer.indexOf('\n');
+			if (end < 0)
+				break;
+			notePong(client, client.buffer.mid(8, end - 8).trimmed().toUInt());
+			client.buffer.remove(0, end + 1);
 			continue;
 		}
 		ParseResult result = parse_gamepad_state(client.buffer.constData(), client.buffer.size());
@@ -1715,6 +1902,11 @@ void Server::serveHttp(Client &client)
 							 "Connection: Upgrade\r\nSec-WebSocket-Accept: " +
 							 accept + "\r\n\r\n");
 		client.protocol = Client::Protocol::WebSocket;
+		if (needsApproval(client))
+		{
+			askApproval(client);
+			return;
+		}
 		QString failure;
 		if (!activate(client, &failure))
 		{
@@ -1835,6 +2027,11 @@ void Server::handleWebMessage(Client &client, const QByteArray &payload)
 		client.model = message.value("model").toString().left(60).trimmed();
 		debugLog(QStringLiteral("Hello from %1: %2, %3").arg(client.socket->peerAddress().toString(), client.name, client.model));
 		updateSlots();
+		return;
+	}
+	if (type == "pong")
+	{
+		notePong(client, static_cast<quint32>(message.value("id").toDouble()));
 		return;
 	}
 	if (type == "dbg")

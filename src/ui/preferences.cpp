@@ -8,6 +8,7 @@
 #include "ui_preferences.h"
 
 #include <QCheckBox>
+#include <QComboBox>
 #include <QRadioButton>
 #include <QScrollArea>
 
@@ -96,6 +97,21 @@ Preferences::Preferences(QWidget *parent) : QWidget(parent), ui(new Ui::Preferen
 		several->setToolTip(tr("Without it, each phone or browser gets one controller."));
 		ui->generalTabLayout->insertWidget(ui->generalTabLayout->indexOf(ui->executorGroup), several);
 		several->setChecked(SettingsSingleton::instance().qsettings()->value("server/multi_controller", false).toBool());
+	}
+	{
+		auto *approve = new QCheckBox(tr("Ask before a new device connects"), this);
+		approve->setObjectName("requireApprovalCheck");
+		approve->setToolTip(tr("A prompt appears on this PC the first time an address connects. Choose Always allow to remember it."));
+		ui->generalTabLayout->insertWidget(ui->generalTabLayout->indexOf(ui->executorGroup), approve);
+		approve->setChecked(SettingsSingleton::instance().qsettings()->value("server/require_approval", false).toBool());
+		auto *forget = new QPushButton(tr("Forget approved devices"), this);
+		forget->setObjectName("forgetApprovedButton");
+		forget->setMaximumWidth(220);
+		ui->generalTabLayout->insertWidget(ui->generalTabLayout->indexOf(ui->executorGroup), forget);
+		connect(forget, &QPushButton::clicked, this, [forget]() {
+			SettingsSingleton::instance().qsettings()->remove("server/trusted_devices");
+			forget->setText(QObject::tr("Forgotten"));
+		});
 	}
 #ifdef _WIN32
 	{
@@ -191,12 +207,34 @@ Preferences::Preferences(QWidget *parent) : QWidget(parent), ui(new Ui::Preferen
 		ui->executorLayout->insertWidget(1, makeHint(tr("Experimental. Needs Administrator and Developer Mode. Can crash on some systems.")));
 		ui->executorLayout->insertWidget(3, makeHint(tr("No driver needed. Turns gamepad input into keys and mouse. One phone at a time.")));
 #ifdef _WIN32
-		auto *vigemRadio = new QRadioButton(tr("Virtual Xbox 360 Controller (ViGEm)"), ui->executorGroup);
+		auto *vigemRadio = new QRadioButton(tr("Virtual Controller (ViGEm)"), ui->executorGroup);
 		vigemRadio->setObjectName("vigemExecutorRadio");
 		ui->executorLayout->insertWidget(0, vigemRadio);
 		ui->executorLayout->insertWidget(
-			1, makeHint(tr("Recommended for most games. A real XInput controller per phone. Needs the ViGEmBus driver.")));
+			1, makeHint(tr("Recommended for most games. Each phone is a real controller that games see as an Xbox 360 or a PlayStation pad. Needs the ViGEmBus driver.")));
 		connect(vigemRadio, &QRadioButton::toggled, this, &Preferences::executor_type_changed);
+		{
+			// Which controller games think they see
+			auto *row = new QWidget(ui->executorGroup);
+			auto *rowLayout = new QHBoxLayout(row);
+			rowLayout->setContentsMargins(30, 0, 0, 0);
+			rowLayout->addWidget(new QLabel(tr("Controller type"), row));
+			auto *style = new QComboBox(row);
+			style->setObjectName("padStyleCombo");
+			style->addItem(tr("Xbox 360 (XInput)"), QStringLiteral("xbox"));
+			style->addItem(tr("PlayStation (DualShock 4)"), QStringLiteral("playstation"));
+			style->setMinimumWidth(240);
+			style->setToolTip(tr("How games detect the virtual controller. PlayStation shows PlayStation buttons in games that support them. "
+								 "Games that only read XInput may not see a PlayStation pad. Applies to devices that connect after you save."));
+			const int at = style->findData(SettingsSingleton::instance().qsettings()->value("server/pad_style", "xbox").toString());
+			style->setCurrentIndex(at >= 0 ? at : 0);
+			rowLayout->addWidget(style);
+			rowLayout->addStretch();
+			ui->executorLayout->insertWidget(2, row);
+			ui->executorLayout->insertWidget(3, makeHint(tr("Games with PlayStation support show PlayStation button prompts. XInput-only games may not see a PlayStation pad.")));
+			style->setEnabled(vigemRadio->isChecked());
+			connect(vigemRadio, &QRadioButton::toggled, style, &QWidget::setEnabled);
+		}
 #endif
 		auto *card = new QFrame(ui->executorGroup);
 		card->setStyleSheet("QFrame { background-color: #1A1A1A; border: none; border-radius: 4px; }");
@@ -264,6 +302,10 @@ Preferences::Preferences(QWidget *parent) : QWidget(parent), ui(new Ui::Preferen
 		}
 		if (auto *several = findChild<QCheckBox *>("multiControllerCheck"))
 			settings.qsettings()->setValue("server/multi_controller", several->isChecked());
+		if (auto *approve = findChild<QCheckBox *>("requireApprovalCheck"))
+			settings.qsettings()->setValue("server/require_approval", approve->isChecked());
+		if (auto *style = findChild<QComboBox *>("padStyleCombo"))
+			settings.qsettings()->setValue("server/pad_style", style->currentData().toString());
 		if (auto *admin = findChild<QCheckBox *>("runAsAdminCheck"))
 			settings.qsettings()->setValue("app/run_as_admin", admin->isChecked());
 
@@ -689,6 +731,13 @@ void Preferences::restore_defaults()
 	if (auto *several = findChild<QCheckBox *>("multiControllerCheck"))
 		several->setChecked(false);
 	settings.qsettings()->setValue("server/multi_controller", false);
+	if (auto *style = findChild<QComboBox *>("padStyleCombo"))
+		style->setCurrentIndex(0);
+	settings.qsettings()->setValue("server/pad_style", "xbox");
+	if (auto *approve = findChild<QCheckBox *>("requireApprovalCheck"))
+		approve->setChecked(false);
+	settings.qsettings()->setValue("server/require_approval", false);
+	settings.qsettings()->remove("server/trusted_devices");
 	if (auto *admin = findChild<QCheckBox *>("runAsAdminCheck"))
 		admin->setChecked(false);
 	settings.qsettings()->setValue("app/run_as_admin", false);
@@ -767,8 +816,8 @@ void Preferences::update_executor_notes()
 		notes = "- Windows 10 or later\n"
 				"- Needs the [ViGEmBus driver](https://github.com/nefarius/ViGEmBus/releases) "
 				"installed once\n"
-				"- Each phone becomes its own Xbox 360 controller (up to 4)\n"
-				"- Works with any game that supports XInput";
+				"- Each phone becomes its own controller (up to 8), seen as an Xbox 360 or a DualShock 4\n"
+				"- Xbox 360 works with any game that supports XInput. PlayStation shows PlayStation buttons in games that support it";
 	}
 	else if (ui->gamepadExecutorRadio->isChecked())
 	{
@@ -802,7 +851,7 @@ void Preferences::update_executor_notes()
 
 	ui->executorNotesLabel->setText(notes);
 	if (auto *title = findChild<QLabel *>("executorDetailsTitle"))
-		title->setText(vigemSelected							  ? tr("Virtual Xbox 360 Controller")
+		title->setText(vigemSelected							  ? tr("Virtual Controller (Xbox 360 or PlayStation)")
 					   : ui->gamepadExecutorRadio->isChecked() ? tr("InputInjector")
 															   : tr("Keyboard/Mouse Simulation"));
 }
