@@ -131,14 +131,6 @@ They enforce running the formatter before committing:
 
 Bypass a hook with `--no-verify`; disable all of them with `git config --unset core.hooksPath`.
 
-## Documentation
-
-Generate documentation with Doxygen:
-
-```bash
-doxygen Doxyfile
-```
-
 ## Troubleshooting
 
 ### Windows Issues

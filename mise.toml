@@ -128,7 +128,3 @@ description = "Install Release build into ./dist"
 depends = ["build"]
 run = "cmake --install build-linux --prefix dist --config Release"
 run_windows = "cmake --install build-windows --prefix dist --config Release"
-
-[tasks.docs]
-description = "Generate Doxygen docs (needs doxygen and graphviz)"
-run = "doxygen Doxyfile"
