@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 400" width="1280" height="400" role="img" aria-label="AirDeck: wireless control, your way. A phone controller layout editor.">
+  <defs>
+    <pattern id="cg-grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M 32 0 L 0 0 0 32" fill="none" stroke="#B7BBC4" stroke-width="0.75"/>
+    </pattern>
+    <radialGradient id="cg-grid-fade" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fff" stop-opacity="0.10"/>
+      <stop offset="62%" stop-color="#fff" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+    <mask id="cg-gridmask">
+      <rect x="520" y="16" width="744" height="368" fill="url(#cg-grid-fade)"/>
+    </mask>
+    <radialGradient id="cg-mint-glow" cx="72%" cy="50%" r="34%">
+      <stop offset="0%" stop-color="#6EF0C2" stop-opacity="0.07"/>
+      <stop offset="100%" stop-color="#090909" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Base canvas and recessed grid -->
+  <rect width="1280" height="400" rx="16" fill="#090909"/>
+  <rect x="520" y="16" width="744" height="368" fill="url(#cg-grid)" mask="url(#cg-gridmask)"/>
+  <rect width="1280" height="400" rx="16" fill="url(#cg-mint-glow)"/>
+  <rect x="0.75" y="0.75" width="1278.5" height="398.5" rx="15.25" fill="none" stroke="#252529" stroke-width="1.5"/>
+
+  <!-- Left brand column -->
+  <g transform="translate(64, 126)">
+    <!-- AD ligature mark: the A and D share one stem, like the AE ash -->
+    <g transform="translate(-11, -22) scale(0.42)">
+      <path fill="#F4F4F5" fill-rule="evenodd" d="M 26 204 L 122 54 L 158 54 A 70 75 0 0 1 228 129 A 70 75 0 0 1 158 204 L 122 204 L 122 164 L 83.6 164 L 58 204 Z M 122 104 L 97.7 142 L 122 142 Z M 148 80 L 158 80 A 44 49 0 0 1 202 129 A 44 49 0 0 1 158 178 L 148 178 L 148 164 L 160 164 L 160 142 L 148 142 Z"/>
+      <path fill="#6EF0C2" d="M 167 153 A 10 10 0 1 0 187 153 A 10 10 0 1 0 167 153 Z"/>
+    </g>
+
+    <!-- Wordmark -->
+    <text x="104" y="55" fill="#F4F4F5" font-family="'Space Grotesk','Inter','Segoe UI',system-ui,sans-serif" font-size="64" font-weight="700" letter-spacing="-1.8">AirDeck</text>
+  </g>
+
+  <!-- Hierarchy: tagline + single subtle capability line -->
+  <text x="64" y="232" fill="#B7BBC4" font-family="'Space Grotesk','Inter','Segoe UI',system-ui,sans-serif" font-size="22" font-weight="500" letter-spacing="-0.2">Wireless control, your way.</text>
+  <text x="64" y="264" fill="#B7BBC4" fill-opacity="0.62" font-family="'Space Grotesk','Inter','Segoe UI',system-ui,sans-serif" font-size="13.5" font-weight="500">Virtual Xbox 360 pad over Wi-Fi  ·  Browser or app  ·  Editable layouts</text>
+
+  <!-- Right side: layout-editor composition (64px top, bottom, and right margins) -->
+  <g transform="translate(616, 64)">
+    <rect x="0" y="0" width="600" height="272" rx="24" fill="#101013" stroke="#252529" stroke-width="1.5"/>
+    <rect x="12" y="12" width="576" height="248" rx="16" fill="#0B0B0E" stroke="#252529" stroke-opacity="0.7" stroke-width="1"/>
+
+    <!-- Structural layout guides -->
+    <line x1="300" y1="12" x2="300" y2="260" stroke="#B7BBC4" stroke-opacity="0.10" stroke-width="1" stroke-dasharray="4 5"/>
+    <line x1="12" y1="208" x2="588" y2="208" stroke="#B7BBC4" stroke-opacity="0.10" stroke-width="1" stroke-dasharray="4 5"/>
+    <line x1="482" y1="12" x2="482" y2="260" stroke="#B7BBC4" stroke-opacity="0.10" stroke-width="1" stroke-dasharray="4 5"/>
+
+    <!-- Active snap guides intersecting selected left stick -->
+    <line x1="118" y1="12" x2="118" y2="260" stroke="#6EF0C2" stroke-opacity="0.40" stroke-width="1" stroke-dasharray="3 4"/>
+    <line x1="12" y1="152" x2="588" y2="152" stroke="#6EF0C2" stroke-opacity="0.34" stroke-width="1" stroke-dasharray="3 4"/>
+
+    <!-- Top-center snap status readout -->
+    <g transform="translate(254, 34)">
+      <rect width="92" height="20" rx="10" fill="#131317" stroke="#252529" stroke-width="1"/>
+      <circle cx="14" cy="10" r="2.8" fill="#6EF0C2"/>
+      <text x="53" y="13.5" text-anchor="middle" fill="#B7BBC4" fill-opacity="0.82" font-family="'Space Grotesk','Inter','Segoe UI',system-ui,sans-serif" font-size="9.5" font-weight="600" letter-spacing="0.4">SNAPPING ON</text>
+    </g>
+
+    <!-- Shoulder triggers and bumpers -->
+    <g font-family="'Space Grotesk','Inter','Segoe UI',system-ui,sans-serif" font-weight="600" text-anchor="middle" fill="#B7BBC4">
+      <rect x="54" y="32" width="128" height="24" rx="7" fill="#1E1E22" stroke="#252529" stroke-width="1.2"/>
+      <text x="118" y="48" font-size="11">LT</text>
+      <rect x="54" y="62" width="128" height="20" rx="6" fill="#151518" stroke="#252529" stroke-width="1.2"/>
+      <text x="118" y="75.5" font-size="10">LB</text>
+
+      <rect x="418" y="32" width="128" height="24" rx="7" fill="#1E1E22" stroke="#252529" stroke-width="1.2"/>
+      <text x="482" y="48" font-size="11">RT</text>
+      <rect x="418" y="62" width="128" height="20" rx="6" fill="#151518" stroke="#252529" stroke-width="1.2"/>
+      <text x="482" y="75.5" font-size="10">RB</text>
+    </g>
+
+    <!-- Center view and menu buttons -->
+    <g>
+      <rect x="264" y="144" width="28" height="16" rx="8" fill="#1B1B20" stroke="#252529" stroke-width="1.2"/>
+      <rect x="273" y="149" width="6" height="5" rx="1" fill="none" stroke="#B7BBC4" stroke-opacity="0.65" stroke-width="1"/>
+      <rect x="276" y="151" width="6" height="5" rx="1" fill="#1B1B20" stroke="#B7BBC4" stroke-opacity="0.65" stroke-width="1"/>
+
+      <rect x="308" y="144" width="28" height="16" rx="8" fill="#1B1B20" stroke="#252529" stroke-width="1.2"/>
+      <path d="M 317 149 H 327 M 317 152 H 327 M 317 155 H 327" stroke="#B7BBC4" stroke-opacity="0.65" stroke-width="1.2" stroke-linecap="round"/>
+    </g>
+
+    <!-- Selected left analog stick with mint selection frame and handles -->
+    <g transform="translate(118, 152)">
+      <circle r="33" fill="#16161A" stroke="#6EF0C2" stroke-opacity="0.55" stroke-width="1.4"/>
+      <circle r="17" fill="#252529" stroke="#F4F4F5" stroke-opacity="0.85" stroke-width="1.4"/>
+      <circle r="4.5" fill="none" stroke="#B7BBC4" stroke-opacity="0.35" stroke-width="1"/>
+
+      <rect x="-39" y="-39" width="78" height="78" rx="4" fill="#6EF0C2" fill-opacity="0.05" stroke="#6EF0C2" stroke-width="1.25"/>
+      <rect x="-42" y="-42" width="6" height="6" rx="1.5" fill="#6EF0C2" stroke="#0B0B0E" stroke-width="1"/>
+      <rect x="36" y="-42" width="6" height="6" rx="1.5" fill="#6EF0C2" stroke="#0B0B0E" stroke-width="1"/>
+      <rect x="-42" y="36" width="6" height="6" rx="1.5" fill="#6EF0C2" stroke="#0B0B0E" stroke-width="1"/>
+      <rect x="36" y="36" width="6" height="6" rx="1.5" fill="#6EF0C2" stroke="#0B0B0E" stroke-width="1"/>
+    </g>
+
+    <!-- Selection badge placed cleanly below the selection box -->
+    <g transform="translate(62, 204)">
+      <rect width="112" height="20" rx="5" fill="#6EF0C2"/>
+      <text x="56" y="13.5" text-anchor="middle" fill="#090909" font-family="'Space Grotesk','Inter','Segoe UI',system-ui,sans-serif" font-size="10.5" font-weight="700">Left stick  100%</text>
+    </g>
+
+    <!-- D-pad -->
+    <g transform="translate(208, 208)">
+      <path d="M -8.5 -24 H 8.5 V -8.5 H 24 V 8.5 H 8.5 V 24 H -8.5 V 8.5 H -24 V -8.5 H -8.5 Z" fill="#1B1B20" stroke="#B7BBC4" stroke-opacity="0.38" stroke-width="1.2" stroke-linejoin="round"/>
+      <circle r="4.5" fill="#252529"/>
+    </g>
+
+    <!-- Right analog stick -->
+    <g transform="translate(392, 208)">
+      <circle r="29" fill="#16161A" stroke="#252529" stroke-width="1.5"/>
+      <circle r="15" fill="#252529" stroke="#B7BBC4" stroke-opacity="0.5" stroke-width="1.3"/>
+    </g>
+
+    <!-- Face buttons -->
+    <g transform="translate(482, 152)" font-family="'Space Grotesk','Inter','Segoe UI',system-ui,sans-serif" font-size="11" font-weight="700" text-anchor="middle" fill="#F4F4F5">
+      <circle cy="-26" r="13" fill="#1E1E24" stroke="#B7BBC4" stroke-opacity="0.45" stroke-width="1.2"/>
+      <circle cx="26" r="13" fill="#1E1E24" stroke="#B7BBC4" stroke-opacity="0.45" stroke-width="1.2"/>
+      <circle cy="26" r="13" fill="#1E1E24" stroke="#B7BBC4" stroke-opacity="0.45" stroke-width="1.2"/>
+      <circle cx="-26" r="13" fill="#1E1E24" stroke="#B7BBC4" stroke-opacity="0.45" stroke-width="1.2"/>
+      <text y="-22">Y</text>
+      <text x="26" y="4">B</text>
+      <text y="30">A</text>
+      <text x="-26" y="4">X</text>
+    </g>
+  </g>
+</svg>

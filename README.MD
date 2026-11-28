@@ -1,5 +1,7 @@
 <div align="center">
 
+![AirDeck banner: wireless control, your way. Use your phone as a PC game controller with a virtual Xbox 360 gamepad over Wi-Fi.](assets/banner.svg)
+
 # AirDeck-PC
 
 The Windows server for AirDeck. Use your phone as a PC game controller: it creates a virtual Xbox 360 gamepad from an Android phone or iPhone over Wi-Fi, and hosts a browser controller that needs no app.
@@ -11,8 +13,6 @@ The Windows server for AirDeck. Use your phone as a PC game controller: it creat
 ![Last Commit](https://img.shields.io/github/last-commit/horse-3903/AirDeck-PC?style=flat-square)
 
 [Download](https://github.com/horse-3903/AirDeck-PC/releases) | [Try it in your browser](https://horse-3903.github.io/demos/airdeck-demo.html) | [AirDeck docs](https://github.com/horse-3903/AirDeck) | [Android app](https://github.com/horse-3903/AirDeck-Mobile)
-
-![AirDeck phone game controller layout with two analog sticks, D-pad, face buttons, triggers and a connection badge](assets/controller.png)
 
 </div>
 
